@@ -1,0 +1,9 @@
+cd src
+
+javac -cp "lib/jakarta.servlet-api-6.0.0.jar" java/controller/FrontControllerServlet.java
+
+cd java 
+
+jar cvf sprint0.jar controller/
+
+mv sprint0.jar ../out/
