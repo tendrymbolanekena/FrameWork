@@ -8,20 +8,21 @@ import java.io.IOException;
 
 
 public class FrontControllerServlet extends HttpServlet {
-    protected void doGet(HttpServletRequest req,HttpServletResponse resp) throws ServletException, IOException {
+
+    protected void processRequest (HttpServletRequest req , HttpServletResponse resp) throws ServletException, IOException {
+
         String path = req.getRequestURI();
 
         resp.setContentType("text/html");
-
-        resp.getWriter().write("<html><body><h1>Front Controller Servlet</h1><p>lien: " + path + "</p></body></html>");
+    
+        resp.getWriter().write("<html><body><p>lien: " + path + "</p></body></html>");
+    }
+    protected void doGet(HttpServletRequest req,HttpServletResponse resp) throws ServletException, IOException {
+        processRequest(req, resp);
     }
 
     protected void doPost(HttpServletRequest req,HttpServletResponse resp) throws ServletException, IOException {
-        String path = req.getRequestURI();
-
-        resp.setContentType("text/html");
-
-        resp.getWriter().write("<html><body><h1>Front Controller Servlet</h1><p>lien: " + path + "</p></body></html>");
+       processRequest(req, resp);
     }
 
 }
