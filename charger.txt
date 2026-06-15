@@ -1,0 +1,14 @@
+cd src
+cd java
+
+javac -cp "../lib/jakarta.servlet-api-6.0.0.jar" controller/FrontControllerServlet.java
+ 
+
+jar cvf sprint0.jar controller/
+
+rm -f controller/*.class
+
+
+mv sprint0.jar ../out/
+
+cd ../../
