@@ -2,7 +2,7 @@ cd src
 cd java
 
 javac -cp "../lib/jakarta.servlet-api-6.0.0.jar" controller/FrontControllerServlet.java
- 
+
 
 jar cvf sprint0.jar controller/
 
@@ -12,3 +12,12 @@ rm -f controller/*.class
 mv sprint0.jar ../out/
 
 cd ../../
+
+
+
+pour le sprint 1
+# 1. Créez un dossier temporaire pour les fichiers compilés
+mkdir bin
+
+# 2. Compilez tous les fichiers Java en incluant la dépendance et en envoyant le résultat dans 'bin'
+javac -cp "src/lib/jakarta.servlet-api-6.0.0.jar" -d bin src/java/annotation/*.java src/java/controller/*.java src/java/utilitaire/*.java
