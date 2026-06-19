@@ -21,3 +21,7 @@ mkdir bin
 
 # 2. Compilez tous les fichiers Java en incluant la dépendance et en envoyant le résultat dans 'bin'
 javac -cp "src/lib/jakarta.servlet-api-6.0.0.jar" -d bin src/java/annotation/*.java src/java/controller/*.java src/java/utilitaire/*.java
+
+transformer en jar
+mkdir -p out
+jar cvf out/sprint1.jar -C bin .
