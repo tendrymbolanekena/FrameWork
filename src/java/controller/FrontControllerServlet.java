@@ -8,7 +8,7 @@ import java.io.IOException;
 import java.util.*;
 import utilitaire.Utilitaire;
 import annotation.Controller;
-import annotation.RequestMapping;
+import annotation.UrlMapping;
 import java.lang.reflect.*;
 import java.util.List;
 import java.util.Map;
@@ -39,20 +39,20 @@ public class FrontControllerServlet extends HttpServlet {
 
     protected void processRequest (HttpServletRequest req , HttpServletResponse resp) throws ServletException, IOException {
 
-        String path = req.getRequestURI();
+        String path = req.getPathInfo();
 
         resp.setContentType("text/html");
         resp.getWriter().write("<html><body>");
         // resp.getWriter().write("<h1>Request Path: " + path + "</h1>");
 
         Map.Entry<String, MethodeClass> entree = methodeMap.get(path) != null ? Map.entry(path, methodeMap.get(path)) : null;
-
+        
         if(entree !=null){
             resp.getWriter().write("<h1>Controller Class: " + entree.getValue().getInstance().getClass().getSimpleName() + "</h1> ");
             resp.getWriter().write("<h2>Method: " + entree.getValue().getMethode().getName() + "</h2>");
             resp.getWriter().write("<h3>Path: " + entree.getKey() + "</h3>");
         }else{
-            
+            resp.getWriter().write("<h1>No matching controller method found for path: " + path + "</h1>");
             for(Map.Entry<String, MethodeClass> entry : methodeMap.entrySet()) {
     
                 // resp.getWriter().write("<h1>Controller Class: " + entry.getValue().getInstance().getClass().getSimpleName() + "</h1> ");
@@ -106,9 +106,9 @@ public class FrontControllerServlet extends HttpServlet {
                     Object instance = clazz.getDeclaredConstructor().newInstance();
                     Method[] methods = clazz.getDeclaredMethods();
                     for (Method method : methods) {
-                        if (method.isAnnotationPresent(RequestMapping.class)) {
-                            RequestMapping requestMapping = method.getAnnotation(RequestMapping.class);
-                            String path = requestMapping.value();
+                        if (method.isAnnotationPresent(UrlMapping.class)) {
+                            UrlMapping urlMapping = method.getAnnotation(UrlMapping.class);
+                            String path = urlMapping.value();
                             methodeMap.put(path, new MethodeClass(method, instance));
                         }
                     }
