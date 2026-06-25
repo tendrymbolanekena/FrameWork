@@ -8,8 +8,11 @@ import java.io.IOException;
 import java.util.*;
 import utilitaire.Utilitaire;
 import annotation.Controller;
-import annotation.RequestMapping;
+import annotation.UrlMapping;
 import java.lang.reflect.*;
+import java.util.List;
+import java.util.Map;
+
 
 
 public class FrontControllerServlet extends HttpServlet {
@@ -21,28 +24,44 @@ public class FrontControllerServlet extends HttpServlet {
         Method methode;
         Object instance;
 
-        // MethodeClass(Method methode, Object instance) {
-        //     this.methode = methode;
-        //     this.instance = instance;
-        // }
-        // public Method getMethode() {
-        //     return methode;
-        // }
-        // public Object getInstance() {
-        //     return instance;
-        // }
+        MethodeClass(Method methode, Object instance) {
+            this.methode = methode;
+            this.instance = instance;
+        }
+        public Method getMethode() {
+            return methode;
+        }
+        public Object getInstance() {
+            return instance;
+        }
         
     }
 
     protected void processRequest (HttpServletRequest req , HttpServletResponse resp) throws ServletException, IOException {
 
-        String path = req.getRequestURI();
+        String path = req.getPathInfo();
 
         resp.setContentType("text/html");
         resp.getWriter().write("<html><body>");
-        for(String controllerClass : classeController) {
-            resp.getWriter().write("<h1>Controller Class: " + controllerClass + "</h1>");
+        // resp.getWriter().write("<h1>Request Path: " + path + "</h1>");
+
+        Map.Entry<String, MethodeClass> entree = methodeMap.get(path) != null ? Map.entry(path, methodeMap.get(path)) : null;
+        
+        if(entree !=null){
+            resp.getWriter().write("<h1>Controller Class: " + entree.getValue().getInstance().getClass().getSimpleName() + "</h1> ");
+            resp.getWriter().write("<h2>Method: " + entree.getValue().getMethode().getName() + "</h2>");
+            resp.getWriter().write("<h3>Path: " + entree.getKey() + "</h3>");
+        }else{
+            resp.getWriter().write("<h1>No matching controller method found for path: " + path + "</h1>");
+            for(Map.Entry<String, MethodeClass> entry : methodeMap.entrySet()) {
+    
+                // resp.getWriter().write("<h1>Controller Class: " + entry.getValue().getInstance().getClass().getSimpleName() + "</h1> ");
+                // resp.getWriter().write("<h2>Method: " + entry.getValue().getMethode().getName() + "</h2>");
+                resp.getWriter().write("<h3>Path: " + entry.getKey() + "</h3>");
+            }
+
         }
+
         resp.getWriter().write("</body></html>");
 
     }
@@ -55,6 +74,24 @@ public class FrontControllerServlet extends HttpServlet {
        processRequest(req, resp);
     }
 
+    // @Override
+    // public void init() throws ServletException {
+    //     super.init();
+    //     String packageName = "controller";
+    //     Utilitaire utilitaire = new Utilitaire();
+    //     try {
+    //         List<Class<?>> classes = utilitaire.getClassByPackage(packageName);
+    //         List<Class<?>> classEnumerer = utilitaire.getClassesWithAnnotation(classes, annotation.Controller.class);
+            
+    //         for (Class<?> clazz : classEnumerer) {
+    //             classeController.add(clazz.getName());
+    //         }
+    //     } catch (IOException e) {
+    //         e.printStackTrace();
+    //     }
+
+    // }
+
     @Override
     public void init() throws ServletException {
         super.init();
@@ -65,38 +102,24 @@ public class FrontControllerServlet extends HttpServlet {
             List<Class<?>> classEnumerer = utilitaire.getClassesWithAnnotation(classes, annotation.Controller.class);
             
             for (Class<?> clazz : classEnumerer) {
-                classeController.add(clazz.getName());
+                try {
+                    Object instance = clazz.getDeclaredConstructor().newInstance();
+                    Method[] methods = clazz.getDeclaredMethods();
+                    for (Method method : methods) {
+                        if (method.isAnnotationPresent(UrlMapping.class)) {
+                            UrlMapping urlMapping = method.getAnnotation(UrlMapping.class);
+                            String path = urlMapping.value();
+                            methodeMap.put(path, new MethodeClass(method, instance));
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
 
     }
-
-    // @Override
-    // public void init1() throws ServletException {
-    //     super.init();
-    //     String packageName = "controller";
-    //     Utilitaire utilitaire = new Utilitaire();
-    //     try {
-    //         List<Class<?>> classes = utilitaire.getClassByPackage(packageName);
-    //         List<Class<?>> classEnumerer = utilitaire.getClassesWithAnnotation(classes, annotation.Controller.class);
-            
-    //         for (Class<?> clazz : classEnumerer) {
-    //             Method[] methods = clazz.getDeclaredMethods();
-    //             for (Method method : methods) {
-    //                 if (method.isAnnotationPresent(RequestMapping.class)) {
-    //                     RequestMapping requestMapping = method.getAnnotation(RequestMapping.class);
-    //                     String path = requestMapping.value();
-    //                     Object instance = clazz.getDeclaredConstructor().newInstance();
-    //                     methodeMap.put(path, new MethodeClass(method, instance));
-    //                 }
-    //             }
-    //         }
-    //     } catch (IOException e) {
-    //         e.printStackTrace();
-    //     }
-
-    // }
     
 }
