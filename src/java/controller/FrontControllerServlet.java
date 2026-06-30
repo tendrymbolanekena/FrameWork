@@ -7,24 +7,20 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.*;
 import utilitaire.*;
-import annotation.Controller;
-import annotation.UrlMapping;
 import java.lang.reflect.*;
-import java.util.List;
-import java.util.Map;
 
 
 
 public class FrontControllerServlet extends HttpServlet {
 
-    private List<String> classeController = new ArrayList<>();
-    private Map<UrlMethode, MethodeClass> methodeMap = new HashMap<>();
+    // private List<String> classeController = new ArrayList<>();
+    // private Map<UrlMethode, MethodeClass> methodeMap = new HashMap<>;
 
-    private static class MethodeClass{
+    public static class MethodeClass{
         Method methode;
         Object instance;
 
-        MethodeClass(Method methode, Object instance) {
+        public MethodeClass(Method methode, Object instance) {
             this.methode = methode;
             this.instance = instance;
         }
@@ -38,6 +34,9 @@ public class FrontControllerServlet extends HttpServlet {
     }
 
     protected void processRequest (HttpServletRequest req , HttpServletResponse resp) throws ServletException, IOException {
+        
+        @SuppressWarnings("unchecked")
+        Map<UrlMethode, MethodeClass> methodeMap = (Map<UrlMethode, MethodeClass>) getServletContext().getAttribute("methodeMap");
 
         UrlMethode path = new UrlMethode(req.getPathInfo(), req.getMethod());
 
@@ -80,37 +79,40 @@ public class FrontControllerServlet extends HttpServlet {
        processRequest(req, resp);
     }
 
-    @Override
-    public void init() throws ServletException {
-        super.init();
-        String packageName = "controller";
-        Utilitaire utilitaire = new Utilitaire();
-        try {
-            List<Class<?>> classes = utilitaire.getClassByPackage(packageName);
-            List<Class<?>> classEnumerer = utilitaire.getClassesWithAnnotation(classes, annotation.Controller.class);
+    // @Override
+    // public void init() throws ServletException {
+    //     super.init();
+    //     String packageName = "controller";
+    //     Utilitaire utilitaire = new Utilitaire();
+    //     try {
+    //         List<Class<?>> classes = utilitaire.getClassByPackage(packageName);
+    //         List<Class<?>> classEnumerer = utilitaire.getClassesWithAnnotation(classes, annotation.Controller.class);
             
-            for (Class<?> clazz : classEnumerer) {
-                try {
-                    Object instance = clazz.getDeclaredConstructor().newInstance();
-                    Method[] methods = clazz.getDeclaredMethods();
-                    for (Method method : methods) {
-                        if (method.isAnnotationPresent(UrlMapping.class)) {
-                            UrlMapping urlMapping = method.getAnnotation(UrlMapping.class);
-                            UrlMethode path = new UrlMethode(urlMapping.path(), urlMapping.methode());
+    //         for (Class<?> clazz : classEnumerer) {
+    //             try {
+    //                 Object instance = clazz.getDeclaredConstructor().newInstance();
+    //                 Method[] methods = clazz.getDeclaredMethods();
+    //                 for (Method method : methods) {
+    //                     if (method.isAnnotationPresent(UrlMapping.class)) {
+    //                         UrlMapping urlMapping = method.getAnnotation(UrlMapping.class);
+    //                         UrlMethode path = new UrlMethode(urlMapping.path(), urlMapping.methode());
                             
-                            if(!methodeMap.containsKey(path)){
-                                methodeMap.put(path, new MethodeClass(method, instance));
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    //                         if(methodeMap.containsKey(path)){
+    //                             throw new ServletException("Duplicate mapping for path: " + urlMapping.path() + " and method: " + urlMapping.methode() );
+    //                         }
+    //                         else{
+    //                             methodeMap.put(path, new MethodeClass(method, instance));
+    //                         }
+    //                     }
+    //                 }
+    //             } catch (Exception e) {
+    //                 e.printStackTrace();
+    //             }
+    //         }
+    //     } catch (IOException e) {
+    //         e.printStackTrace();
+    //     }
 
-    }
+    // }
     
 }

@@ -1,9 +1,9 @@
 package utilitaire;
 
-import java.util.*;
 import java.io.*;
 import java.net.URL;
 import java.net.URLDecoder;
+import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -60,13 +60,13 @@ public class Utilitaire {
         return classes;
     }
 
-    public List<Class<?>> getClassesWithAnnotation(List<Class<?>> classes, Class<? extends java.lang.annotation.Annotation> annotation) { 
-        List<Class<?>> annotatedClasses = new ArrayList<>();
+    public void getClassesWithAnnotation(List<Class<?>> classes, Class<? extends java.lang.annotation.Annotation> annotation) { 
+        // List<Class<?>> annotatedClasses = new ArrayList<>();
         for (Class<?> clazz : classes) {
-            if (clazz.isAnnotationPresent(annotation)) {
-                annotatedClasses.add(clazz);
+            if (!clazz.isAnnotationPresent(annotation)) {
+                classes.remove(clazz);
             }
         }
-        return annotatedClasses;
+        // return annotatedClasses;
     }
 }
