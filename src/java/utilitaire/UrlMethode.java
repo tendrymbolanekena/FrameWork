@@ -27,12 +27,17 @@ public class UrlMethode {
         return this.methode;
     }
 
-    public boolean existKey(Map<UrlMethode,Object> map){
-        for(Map.Entry<UrlMethode,Object> entity = map.entrySet()){
-            if(equals(entity.getKey())){
-                return true;
-            }
-        }
-        return false;
+    @Override
+    public int hashCode() {
+        return Objects.hash(path, methode);
     }
+
+    // public boolean existKey(Map<UrlMethode,Object> map){
+    //     for(Map.Entry<UrlMethode,Object> entity = map.entrySet()){
+    //         if(equals(entity.getKey())){
+    //             return true;
+    //         }
+    //     }
+    //     return false;
+    // }
 }     
