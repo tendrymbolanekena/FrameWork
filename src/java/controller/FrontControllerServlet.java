@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.*;
 import utilitaire.*;
 import java.lang.reflect.*;
+import view.ModelAndView;
 
 
 
@@ -34,7 +35,14 @@ public class FrontControllerServlet extends HttpServlet {
     }
 
     protected void processRequest (HttpServletRequest req , HttpServletResponse resp) throws ServletException, IOException {
-        
+        String pathInfo = req.getPathInfo();
+
+        if (pathInfo != null && pathInfo.endsWith(".jsp")) {
+
+            req.getServletContext().getNamedDispatcher("jsp").forward(req, resp);
+            return; 
+        }
+
         @SuppressWarnings("unchecked")
         Map<UrlMethode, MethodeClass> methodeMap = (Map<UrlMethode, MethodeClass>) getServletContext().getAttribute("methodeMap");
 
@@ -42,16 +50,29 @@ public class FrontControllerServlet extends HttpServlet {
 
         resp.setContentType("text/html");
         resp.getWriter().write("<html><body>");
-        resp.getWriter().write("<h1>Request Path: " + path.getPath() + path.getMethode() + "</h1>");
+        resp.getWriter().write("<h1>Request Path11111: " + path.getPath() + path.getMethode() + "</h1>");
+       
 
         Map.Entry<UrlMethode, MethodeClass> entree = methodeMap.get(path) != null ? Map.entry(path, methodeMap.get(path)) : null;
-        
+        resp.getWriter().write("<h1>Matching Entry: " + (entree != null ? entree.getKey().getPath() + entree.getKey().getMethode() : "No matching entry") + "</h1>");
+
         if(entree !=null){
             resp.getWriter().write("<h1>Controller Class: " + entree.getValue().getInstance().getClass().getSimpleName() + "</h1> ");
             resp.getWriter().write("<h2>Method: " + entree.getValue().getMethode().getName() + "</h2>");
             entree.getValue().getMethode().setAccessible(true);
             try {
-                entree.getValue().getMethode().invoke(entree.getValue().getInstance());
+                Class<?>[] parameterTypes = entree.getValue().getMethode().getParameterTypes();
+                Object[] args = new Object[parameterTypes.length];
+                if(parameterTypes[0]==ModelAndView.class){
+                    args[0] = new ModelAndView();
+                    entree.getValue().getMethode().invoke(entree.getValue().getInstance(), args);
+                    for(Map.Entry<String, Object> entry : ((ModelAndView) args[0]).getModel().entrySet()) {
+                        req.setAttribute(entry.getKey(), entry.getValue());
+                    }
+                    String prefix = "/WEB-INF/jsp/";
+                    String suffix = ".jsp";
+                    req.getRequestDispatcher(prefix+((ModelAndView) args[0]).getViewName()+suffix).forward(req, resp);
+                }
             } catch (IllegalAccessException | InvocationTargetException e) {
                 e.printStackTrace();
             }
@@ -78,41 +99,5 @@ public class FrontControllerServlet extends HttpServlet {
     protected void doPost(HttpServletRequest req,HttpServletResponse resp) throws ServletException, IOException {
        processRequest(req, resp);
     }
-
-    // @Override
-    // public void init() throws ServletException {
-    //     super.init();
-    //     String packageName = "controller";
-    //     Utilitaire utilitaire = new Utilitaire();
-    //     try {
-    //         List<Class<?>> classes = utilitaire.getClassByPackage(packageName);
-    //         List<Class<?>> classEnumerer = utilitaire.getClassesWithAnnotation(classes, annotation.Controller.class);
-            
-    //         for (Class<?> clazz : classEnumerer) {
-    //             try {
-    //                 Object instance = clazz.getDeclaredConstructor().newInstance();
-    //                 Method[] methods = clazz.getDeclaredMethods();
-    //                 for (Method method : methods) {
-    //                     if (method.isAnnotationPresent(UrlMapping.class)) {
-    //                         UrlMapping urlMapping = method.getAnnotation(UrlMapping.class);
-    //                         UrlMethode path = new UrlMethode(urlMapping.path(), urlMapping.methode());
-                            
-    //                         if(methodeMap.containsKey(path)){
-    //                             throw new ServletException("Duplicate mapping for path: " + urlMapping.path() + " and method: " + urlMapping.methode() );
-    //                         }
-    //                         else{
-    //                             methodeMap.put(path, new MethodeClass(method, instance));
-    //                         }
-    //                     }
-    //                 }
-    //             } catch (Exception e) {
-    //                 e.printStackTrace();
-    //             }
-    //         }
-    //     } catch (IOException e) {
-    //         e.printStackTrace();
-    //     }
-
-    // }
     
 }
