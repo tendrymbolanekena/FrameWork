@@ -9,8 +9,9 @@ import java.util.*;
 import utilitaire.*;
 import java.lang.reflect.*;
 import view.ModelAndView;
-
-
+import annotation.ToJson;
+import com.google.gson.Gson;
+import java.io.PrintWriter;
 
 public class FrontControllerServlet extends HttpServlet {
 
@@ -20,10 +21,15 @@ public class FrontControllerServlet extends HttpServlet {
     public static class MethodeClass{
         Method methode;
         Object instance;
+        ToJson toJson;
 
         public MethodeClass(Method methode, Object instance) {
             this.methode = methode;
             this.instance = instance;
+            this.toJson = methode.getAnnotation(ToJson.class);
+        }
+        public ToJson getToJson() {
+            return toJson;
         }
         public Method getMethode() {
             return methode;
@@ -48,24 +54,35 @@ public class FrontControllerServlet extends HttpServlet {
 
         UrlMethode path = new UrlMethode(req.getPathInfo(), req.getMethod());
 
-        resp.setContentType("text/html");
-        resp.getWriter().write("<html><body>");
-        resp.getWriter().write("<h1>Request Path11111: " + path.getPath() + path.getMethode() + "</h1>");
+        // resp.setContentType("text/html");
+        // resp.getWriter().write("<html><body>");
+        // resp.getWriter().write("<h1>Request Path11111: " + path.getPath() + path.getMethode() + "</h1>");
        
 
         Map.Entry<UrlMethode, MethodeClass> entree = methodeMap.get(path) != null ? Map.entry(path, methodeMap.get(path)) : null;
-        resp.getWriter().write("<h1>Matching Entry: " + (entree != null ? entree.getKey().getPath() + entree.getKey().getMethode() : "No matching entry") + "</h1>");
+        // resp.getWriter().write("<h1>Matching Entry: " + (entree != null ? entree.getKey().getPath() + entree.getKey().getMethode() : "No matching entry") + "</h1>");
 
         if(entree !=null){
-            resp.getWriter().write("<h1>Controller Class: " + entree.getValue().getInstance().getClass().getSimpleName() + "</h1> ");
-            resp.getWriter().write("<h2>Method: " + entree.getValue().getMethode().getName() + "</h2>");
+            // resp.getWriter().write("<h1>Controller Class: " + entree.getValue().getInstance().getClass().getSimpleName() + "</h1> ");
+            // resp.getWriter().write("<h2>Method: " + entree.getValue().getMethode().getName() + "</h2>");
             entree.getValue().getMethode().setAccessible(true);
             try {
                 Class<?>[] parameterTypes = entree.getValue().getMethode().getParameterTypes();
                 Object[] args = new Object[parameterTypes.length];
                 if(parameterTypes[0]==ModelAndView.class){
                     args[0] = new ModelAndView();
-                    entree.getValue().getMethode().invoke(entree.getValue().getInstance(), args);
+                    Object resultat = entree.getValue().getMethode().invoke(entree.getValue().getInstance(), args);
+                    
+                    if (entree.getValue().getToJson() != null) {
+                      resp.setContentType("application/json;charset=UTF-8");
+
+PrintWriter out = resp.getWriter();
+
+out.print("\"" + resultat + "\"");
+
+return;
+                    }
+
                     for(Map.Entry<String, Object> entry : ((ModelAndView) args[0]).getModel().entrySet()) {
                         req.setAttribute(entry.getKey(), entry.getValue());
                     }
