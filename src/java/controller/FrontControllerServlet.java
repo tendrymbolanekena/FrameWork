@@ -69,26 +69,73 @@ public class FrontControllerServlet extends HttpServlet {
             try {
                 Class<?>[] parameterTypes = entree.getValue().getMethode().getParameterTypes();
                 Object[] args = new Object[parameterTypes.length];
-                if(parameterTypes[0]==ModelAndView.class){
+
+                if (parameterTypes.length > 0 && parameterTypes[0] == ModelAndView.class) {
                     args[0] = new ModelAndView();
-                    Object resultat = entree.getValue().getMethode().invoke(entree.getValue().getInstance(), args);
-                    
-                    if (entree.getValue().getToJson() != null) {
-                      resp.setContentType("application/json;charset=UTF-8");
+                }
 
-PrintWriter out = resp.getWriter();
+                Object resultat = entree.getValue().getMethode()
+                        .invoke(entree.getValue().getInstance(), args);
 
-out.print("\"" + resultat + "\"");
+                if (entree.getValue().getToJson() != null) {
+                    resp.setContentType("application/json;charset=UTF-8");
+                
+                    PrintWriter out = resp.getWriter();
+                    if (entree.getValue().getToJson().prettyPrint()) {
+                        out.print(resultat);
+                    } else {
+                        ModelAndView mv = (ModelAndView) resultat;
 
-return;
+                    resp.setContentType("application/json;charset=UTF-8");
+
+
+                    out.print("{");
+
+                    boolean first = true;
+
+                    for (Map.Entry<String, Object> entry : mv.getModel().entrySet()) {
+                            if (!first) {
+                                out.print(",");
+                            }
+
+                            out.print("\"" + entry.getKey() + "\":");
+
+                            Object valeur = entry.getValue();
+
+                            if (valeur instanceof String) {
+                                out.print("\"" + valeur + "\"");
+                            } else {
+                                out.print(valeur);
+                            }
+
+                            first = false;
+                        }
+
+                        out.print("}");
+
+
                     }
+                
+                    out.flush();
+                    return;
+                }
 
-                    for(Map.Entry<String, Object> entry : ((ModelAndView) args[0]).getModel().entrySet()) {
+                if (resultat instanceof ModelAndView) {
+                
+                    ModelAndView modelAndView = (ModelAndView) resultat;
+
+                    for (Map.Entry<String, Object> entry :
+                            modelAndView.getModel().entrySet()) {
+                            
                         req.setAttribute(entry.getKey(), entry.getValue());
                     }
+
                     String prefix = "/WEB-INF/jsp/";
                     String suffix = ".jsp";
-                    req.getRequestDispatcher(prefix+((ModelAndView) args[0]).getViewName()+suffix).forward(req, resp);
+
+                    req.getRequestDispatcher(
+                            prefix + modelAndView.getViewName() + suffix
+                    ).forward(req, resp);
                 }
             } catch (IllegalAccessException | InvocationTargetException e) {
                 e.printStackTrace();
