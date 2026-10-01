@@ -12,6 +12,7 @@ import view.ModelAndView;
 import annotation.ToJson;
 import com.google.gson.Gson;
 import java.io.PrintWriter;
+import annotation.Param;
 
 public class FrontControllerServlet extends HttpServlet {
 
@@ -70,9 +71,32 @@ public class FrontControllerServlet extends HttpServlet {
                 Class<?>[] parameterTypes = entree.getValue().getMethode().getParameterTypes();
                 Object[] args = new Object[parameterTypes.length];
 
-                if (parameterTypes.length > 0 && parameterTypes[0] == ModelAndView.class) {
-                    args[0] = new ModelAndView();
+                Parameter[] parameters = entree.getValue().getMethode().getParameters();
+
+                for(int i = 0; i < parameters.length; i++){
+                    Param param = parameters[i].getAnnotation(Param.class);
+                    if(param != null){
+                        if(parameterTypes[i] == String.class){
+                            args[i] = req.getParameter(param.value());
+                        }
+                        if(parameterTypes[i] == int.class || parameterTypes[i] == Integer.class){
+                            String paramValue = req.getParameter(param.value());
+                            args[i] = (paramValue != null) ? Integer.parseInt(paramValue) : 0;
+                        }
+                        if(parameterTypes[i] == double.class || parameterTypes[i] == Double.class){
+                            String paramValue = req.getParameter(param.value());
+                            args[i] = (paramValue != null) ? Double.parseDouble(paramValue) : 0.0;
+                        }
+                        if(parameterTypes[i] == boolean.class || parameterTypes[i] == Boolean.class){
+                            String paramValue = req.getParameter(param.value());
+                            args[i] = (paramValue != null) ? Boolean.parseBoolean(paramValue) : false;
+                        }
+                    }
                 }
+                
+                // if (parameterTypes.length > 0 && parameterTypes[0] == ModelAndView.class) {
+                //     args[0] = new ModelAndView();
+                // }
 
                 Object resultat = entree.getValue().getMethode()
                         .invoke(entree.getValue().getInstance(), args);
@@ -86,35 +110,35 @@ public class FrontControllerServlet extends HttpServlet {
                     } else {
                         ModelAndView mv = (ModelAndView) resultat;
 
-                    resp.setContentType("application/json;charset=UTF-8");
+                        resp.setContentType("application/json;charset=UTF-8");
 
 
-                    out.print("{");
+                        out.print("{");
 
-                    boolean first = true;
+                        boolean first = true;
 
-                    for (Map.Entry<String, Object> entry : mv.getModel().entrySet()) {
-                            if (!first) {
-                                out.print(",");
+                        for (Map.Entry<String, Object> entry : mv.getModel().entrySet()) {
+                                if (!first) {
+                                    out.print(",");
+                                }
+
+                                out.print("\"" + entry.getKey() + "\":");
+
+                                Object valeur = entry.getValue();
+
+                                if (valeur instanceof String) {
+                                    out.print("\"" + valeur + "\"");
+                                } else {
+                                    out.print(valeur);
+                                }
+
+                                first = false;
                             }
 
-                            out.print("\"" + entry.getKey() + "\":");
+                            out.print("}");
 
-                            Object valeur = entry.getValue();
 
-                            if (valeur instanceof String) {
-                                out.print("\"" + valeur + "\"");
-                            } else {
-                                out.print(valeur);
-                            }
-
-                            first = false;
                         }
-
-                        out.print("}");
-
-
-                    }
                 
                     out.flush();
                     return;
