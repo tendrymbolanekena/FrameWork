@@ -14,6 +14,10 @@ import com.google.gson.Gson;
 import java.io.PrintWriter;
 import annotation.Param;
 
+import java.io.InputStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+
 public class FrontControllerServlet extends HttpServlet {
 
     // private List<String> classeController = new ArrayList<>();
@@ -41,8 +45,84 @@ public class FrontControllerServlet extends HttpServlet {
         
     }
 
+    private Object construireObjet(
+            Class<?> type,
+            String prefixe,
+            HttpServletRequest req
+    ) throws ReflectiveOperationException {
+    
+        Object objet = type.getDeclaredConstructor().newInstance();
+    
+        for (Field champ : type.getDeclaredFields()) {
+            if (Modifier.isStatic(champ.getModifiers())
+                    || Modifier.isFinal(champ.getModifiers())) {
+                continue;
+            }
+    
+            champ.setAccessible(true);
+    
+            String nom = prefixe.isEmpty()
+                    ? champ.getName()
+                    : prefixe + "." + champ.getName();
+    
+            Class<?> t = champ.getType();
+            String valeur = req.getParameter(nom);
+    
+            if (t == String.class) {
+                if (valeur != null) {
+                    champ.set(objet, valeur);
+                }
+            } else if (t == int.class || t == Integer.class) {
+                if (valeur != null && !valeur.isBlank()) {
+                    champ.set(objet, Integer.parseInt(valeur));
+                }
+            } else if (t == double.class || t == Double.class) {
+                if (valeur != null && !valeur.isBlank()) {
+                    champ.set(objet, Double.parseDouble(valeur));
+                }
+            } else if (t == long.class || t == Long.class) {
+                if (valeur != null && !valeur.isBlank()) {
+                    champ.set(objet, Long.parseLong(valeur));
+                }
+            } else if (t == boolean.class || t == Boolean.class) {
+                if (valeur != null) {
+                    champ.set(objet, Boolean.parseBoolean(valeur));
+                }
+            } else if (!t.isPrimitive()
+                    && !t.getName().startsWith("java.")
+                    && !t.isArray()) {
+                    
+                Object sousObjet = construireObjet(t, nom, req);
+                champ.set(objet, sousObjet);
+            }
+        }
+    
+        return objet;
+    }
+
+
     protected void processRequest (HttpServletRequest req , HttpServletResponse resp) throws ServletException, IOException {
         String pathInfo = req.getPathInfo();
+        String uri = req.getRequestURI();
+
+        if (uri.endsWith("/FrameWork.js")) {
+            resp.setContentType("application/javascript");
+            resp.setCharacterEncoding("UTF-8");
+
+            try (InputStream in = getClass()
+                    .getClassLoader()
+                    .getResourceAsStream("FrameWork.js")) {
+                    
+                if (in == null) {
+                    resp.sendError(HttpServletResponse.SC_NOT_FOUND);
+                    return;
+                }
+
+                in.transferTo(resp.getOutputStream());
+            }
+
+            return;
+        }
 
         if (pathInfo != null && pathInfo.endsWith(".jsp")) {
 
@@ -73,24 +153,39 @@ public class FrontControllerServlet extends HttpServlet {
 
                 Parameter[] parameters = entree.getValue().getMethode().getParameters();
 
-                for(int i = 0; i < parameters.length; i++){
-                    Param param = parameters[i].getAnnotation(Param.class);
-                    if(param != null){
-                        if(parameterTypes[i] == String.class){
-                            args[i] = req.getParameter(param.value());
+                String nomObjet = req.getParameter("_fw_object");
+
+                for (int i = 0; i < parameters.length; i++) {
+                
+                    Parameter parameter = parameters[i];
+                    Class<?> type = parameter.getType();
+
+                    Param param = parameter.getAnnotation(Param.class);
+
+                    if (param != null) {
+                    
+                        String valeur = req.getParameter(param.value());
+
+                        if (type == String.class) {
+                            args[i] = valeur;
+
+                        } else if (type == int.class || type == Integer.class) {
+                            args[i] = (valeur != null && !valeur.isBlank())
+                                    ? Integer.parseInt(valeur) : 0;
+
+                        } else if (type == double.class || type == Double.class) {
+                            args[i] = (valeur != null && !valeur.isBlank())
+                                    ? Double.parseDouble(valeur) : 0.0;
+
+                        } else if (type == boolean.class || type == Boolean.class) {
+                            args[i] = (valeur != null)
+                                    ? Boolean.parseBoolean(valeur) : false;
                         }
-                        if(parameterTypes[i] == int.class || parameterTypes[i] == Integer.class){
-                            String paramValue = req.getParameter(param.value());
-                            args[i] = (paramValue != null) ? Integer.parseInt(paramValue) : 0;
-                        }
-                        if(parameterTypes[i] == double.class || parameterTypes[i] == Double.class){
-                            String paramValue = req.getParameter(param.value());
-                            args[i] = (paramValue != null) ? Double.parseDouble(paramValue) : 0.0;
-                        }
-                        if(parameterTypes[i] == boolean.class || parameterTypes[i] == Boolean.class){
-                            String paramValue = req.getParameter(param.value());
-                            args[i] = (paramValue != null) ? Boolean.parseBoolean(paramValue) : false;
-                        }
+
+                    } else if (nomObjet != null
+                            && nomObjet.equals(type.getSimpleName())) {
+                            
+                        args[i] = construireObjet(type, "", req);
                     }
                 }
                 
@@ -161,8 +256,16 @@ public class FrontControllerServlet extends HttpServlet {
                             prefix + modelAndView.getViewName() + suffix
                     ).forward(req, resp);
                 }
-            } catch (IllegalAccessException | InvocationTargetException e) {
+            } catch (ReflectiveOperationException e) {
                 e.printStackTrace();
+
+                if (!resp.isCommitted()) {
+                    resp.sendError(
+                        HttpServletResponse.SC_BAD_REQUEST,
+                        "Erreur lors de la construction de l'objet."
+                    );
+                }
+                return;
             }
         }else{
             resp.getWriter().write("<h1>No matching controller method found for path: " + path + "</h1>");
