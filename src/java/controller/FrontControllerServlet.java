@@ -17,11 +17,17 @@ import annotation.Param;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import jakarta.servlet.http.Part;
+import jakarta.servlet.http.HttpServletRequest;
+import util.*;
+import jakarta.servlet.annotation.MultipartConfig;
 
+@MultipartConfig
 public class FrontControllerServlet extends HttpServlet {
 
     // private List<String> classeController = new ArrayList<>();
     // private Map<UrlMethode, MethodeClass> methodeMap = new HashMap<>;
+    String dossier ;
 
     public static class MethodeClass{
         Method methode;
@@ -44,6 +50,44 @@ public class FrontControllerServlet extends HttpServlet {
         }
         
     }
+    private MapFile construireMapFile(
+            String nomChamp,
+            HttpServletRequest req
+    ) throws Exception {
+
+        Part part = req.getPart(nomChamp);
+
+        if (part == null || part.getSize() == 0) {
+            return null;
+        }
+
+        String nomFichier = part.getSubmittedFileName();
+
+        if (nomFichier == null || nomFichier.isBlank()) {
+            return null;
+        }
+
+        nomFichier = nomFichier.replace('\\', '/');
+        nomFichier = nomFichier.substring(
+            nomFichier.lastIndexOf('/') + 1
+        );
+
+        String extension = "";
+        int position = nomFichier.lastIndexOf('.');
+
+        if (position > 0 && position < nomFichier.length() - 1) {
+            extension = nomFichier.substring(position + 1);
+        }
+
+        byte[] contenu;
+
+        try (var input = part.getInputStream()) {
+            contenu = input.readAllBytes();
+        }
+
+        return new MapFile(nomFichier, extension, contenu);
+    }
+
 
     private Object construireObjet(
             Class<?> type,
@@ -58,40 +102,74 @@ public class FrontControllerServlet extends HttpServlet {
                     || Modifier.isFinal(champ.getModifiers())) {
                 continue;
             }
-    
+
             champ.setAccessible(true);
-    
+
             String nom = prefixe.isEmpty()
                     ? champ.getName()
                     : prefixe + "." + champ.getName();
-    
+
             Class<?> t = champ.getType();
             String valeur = req.getParameter(nom);
-    
+
             if (t == String.class) {
                 if (valeur != null) {
                     champ.set(objet, valeur);
                 }
+
             } else if (t == int.class || t == Integer.class) {
                 if (valeur != null && !valeur.isBlank()) {
                     champ.set(objet, Integer.parseInt(valeur));
                 }
+
             } else if (t == double.class || t == Double.class) {
                 if (valeur != null && !valeur.isBlank()) {
                     champ.set(objet, Double.parseDouble(valeur));
                 }
+
             } else if (t == long.class || t == Long.class) {
                 if (valeur != null && !valeur.isBlank()) {
                     champ.set(objet, Long.parseLong(valeur));
                 }
+
             } else if (t == boolean.class || t == Boolean.class) {
                 if (valeur != null) {
                     champ.set(objet, Boolean.parseBoolean(valeur));
                 }
+
+            } else if (t == MapFile.class) {
+                    
+                try {
+                    MapFile fichier = construireMapFile(nom, req);
+
+                    if (fichier != null) {
+                        String dossier = getServletContext()
+                                .getInitParameter("framework.upload.dir");
+
+                        if (dossier == null || dossier.isBlank()) {
+                            throw new IllegalStateException(
+                                "framework.upload.dir n'est pas configuré"
+                            );
+                        }
+
+                        FileUtil.copierFichier(fichier, dossier);
+                        champ.set(objet, fichier);
+                    }
+
+                } catch (Exception e) {
+                    throw new RuntimeException(
+                        "Erreur lors du traitement du fichier : " + nom, e
+                    );
+                }
+                finally {
+                    continue;
+                }
+
             } else if (!t.isPrimitive()
                     && !t.getName().startsWith("java.")
                     && !t.isArray()) {
                     
+                
                 Object sousObjet = construireObjet(t, nom, req);
                 champ.set(objet, sousObjet);
             }
@@ -203,37 +281,9 @@ public class FrontControllerServlet extends HttpServlet {
                     if (entree.getValue().getToJson().prettyPrint()) {
                         out.print(resultat);
                     } else {
-                        ModelAndView mv = (ModelAndView) resultat;
-
-                        resp.setContentType("application/json;charset=UTF-8");
-
-
-                        out.print("{");
-
-                        boolean first = true;
-
-                        for (Map.Entry<String, Object> entry : mv.getModel().entrySet()) {
-                                if (!first) {
-                                    out.print(",");
-                                }
-
-                                out.print("\"" + entry.getKey() + "\":");
-
-                                Object valeur = entry.getValue();
-
-                                if (valeur instanceof String) {
-                                    out.print("\"" + valeur + "\"");
-                                } else {
-                                    out.print(valeur);
-                                }
-
-                                first = false;
-                            }
-
-                            out.print("}");
-
-
-                        }
+                        Gson objectMapper = new Gson();
+                        out.print(objectMapper.toJson(resultat));
+                    }
                 
                     out.flush();
                     return;
@@ -281,6 +331,20 @@ public class FrontControllerServlet extends HttpServlet {
 
         resp.getWriter().write("</body></html>");
 
+    }
+
+    @Override
+    public void init() throws ServletException {
+        super.init();
+
+        dossier = getServletContext()
+                .getInitParameter("framework.upload.dir");
+
+        if (dossier == null || dossier.isBlank()) {
+            throw new ServletException(
+                "Le paramètre framework.upload.dir n'est pas configuré"
+            );
+        }
     }
 
     protected void doGet(HttpServletRequest req,HttpServletResponse resp) throws ServletException, IOException {
