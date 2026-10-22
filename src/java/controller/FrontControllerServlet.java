@@ -4,6 +4,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession; 
 import java.io.IOException;
 import java.util.*;
 import utilitaire.*;
@@ -260,10 +261,14 @@ public class FrontControllerServlet extends HttpServlet {
                                     ? Boolean.parseBoolean(valeur) : false;
                         }
 
+
                     } else if (nomObjet != null
                             && nomObjet.equals(type.getSimpleName())) {
                             
                         args[i] = construireObjet(type, "", req);
+                    }
+                    else if(type == Mysession.class){
+                        args[i] = getMysession(req);
                     }
                 }
                 
@@ -273,6 +278,8 @@ public class FrontControllerServlet extends HttpServlet {
 
                 Object resultat = entree.getValue().getMethode()
                         .invoke(entree.getValue().getInstance(), args);
+
+                updateSession(req);
 
                 if (entree.getValue().getToJson() != null) {
                     resp.setContentType("application/json;charset=UTF-8");
@@ -333,6 +340,8 @@ public class FrontControllerServlet extends HttpServlet {
 
     }
 
+
+
     @Override
     public void init() throws ServletException {
         super.init();
@@ -344,6 +353,39 @@ public class FrontControllerServlet extends HttpServlet {
             throw new ServletException(
                 "Le paramètre framework.upload.dir n'est pas configuré"
             );
+        }
+    }
+
+    protected Mysession getMysession(HttpServletRequest hsr){
+        HttpSession Hsession = request.getSession(true);
+
+        synchronized (Hsession){
+            Object value = Hsession.getAttribute("mysession");
+
+            if(value instanceof Mysession){
+                return (Mysession)value;
+            }
+
+            Mysession session = new Mysession();
+
+            Hsession.setAttribute("Mysession" , session);
+
+            return session;
+        }
+        return null;
+    }
+
+    protected void updateSession(HttpServlet req){
+        HttpSession Hsession = req.getSession(false);
+
+        if(Hsession.getAttribute("Mysession")==null ){
+            return;
+        }
+        
+        Object val = Hsession.getAttribute("Mysession");
+
+        if(val instanceof Mysession){
+            Hsession.setAttribute("Mysession", val);
         }
     }
 
