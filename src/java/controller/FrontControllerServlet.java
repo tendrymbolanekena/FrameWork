@@ -26,6 +26,8 @@ import jakarta.servlet.annotation.MultipartConfig;
 @MultipartConfig
 public class FrontControllerServlet extends HttpServlet {
 
+    private static final String SESSION_ATTRIBUTE = "Mysession";
+
     // private List<String> classeController = new ArrayList<>();
     // private Map<UrlMethode, MethodeClass> methodeMap = new HashMap<>;
     String dossier ;
@@ -222,6 +224,7 @@ public class FrontControllerServlet extends HttpServlet {
         Map.Entry<UrlMethode, MethodeClass> entree = methodeMap.get(path) != null ? Map.entry(path, methodeMap.get(path)) : null;
         // resp.getWriter().write("<h1>Matching Entry: " + (entree != null ? entree.getKey().getPath() + entree.getKey().getMethode() : "No matching entry") + "</h1>");
 
+        boolean S = false;
         if(entree !=null){
             // resp.getWriter().write("<h1>Controller Class: " + entree.getValue().getInstance().getClass().getSimpleName() + "</h1> ");
             // resp.getWriter().write("<h2>Method: " + entree.getValue().getMethode().getName() + "</h2>");
@@ -266,9 +269,9 @@ public class FrontControllerServlet extends HttpServlet {
                             && nomObjet.equals(type.getSimpleName())) {
                             
                         args[i] = construireObjet(type, "", req);
-                    }
-                    else if(type == Mysession.class){
+                    }else if(type == Mysession.class){
                         args[i] = getMysession(req);
+                        S = true;
                     }
                 }
                 
@@ -278,8 +281,10 @@ public class FrontControllerServlet extends HttpServlet {
 
                 Object resultat = entree.getValue().getMethode()
                         .invoke(entree.getValue().getInstance(), args);
-
-                updateSession(req);
+                
+                if(S){
+                    updateSession(req);
+                }
 
                 if (entree.getValue().getToJson() != null) {
                     resp.setContentType("application/json;charset=UTF-8");
@@ -357,10 +362,10 @@ public class FrontControllerServlet extends HttpServlet {
     }
 
     protected Mysession getMysession(HttpServletRequest hsr){
-        HttpSession Hsession = request.getSession(true);
+        HttpSession Hsession = hsr.getSession(true);
 
         synchronized (Hsession){
-            Object value = Hsession.getAttribute("mysession");
+            Object value = Hsession.getAttribute(SESSION_ATTRIBUTE);
 
             if(value instanceof Mysession){
                 return (Mysession)value;
@@ -368,24 +373,23 @@ public class FrontControllerServlet extends HttpServlet {
 
             Mysession session = new Mysession();
 
-            Hsession.setAttribute("Mysession" , session);
+            Hsession.setAttribute(SESSION_ATTRIBUTE, session);
 
             return session;
         }
-        return null;
     }
 
-    protected void updateSession(HttpServlet req){
+    protected void updateSession(HttpServletRequest req){
         HttpSession Hsession = req.getSession(false);
 
-        if(Hsession.getAttribute("Mysession")==null ){
+        if(Hsession == null || Hsession.getAttribute(SESSION_ATTRIBUTE) == null ){
             return;
         }
         
-        Object val = Hsession.getAttribute("Mysession");
+        Object val = Hsession.getAttribute(SESSION_ATTRIBUTE);
 
         if(val instanceof Mysession){
-            Hsession.setAttribute("Mysession", val);
+            Hsession.setAttribute(SESSION_ATTRIBUTE, val);
         }
     }
 

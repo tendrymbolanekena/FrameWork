@@ -1,8 +1,8 @@
 package util;
 
 import java.util.*;
-import javaj .io.*;
-public class Mysession implements serializable{
+import java.io.*;
+public class Mysession implements Serializable{
     
 
     private static final long serialVersionUID = 1L;
