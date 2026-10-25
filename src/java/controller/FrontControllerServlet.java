@@ -33,6 +33,7 @@ public class FrontControllerServlet extends HttpServlet {
     // private List<String> classeController = new ArrayList<>();
     // private Map<UrlMethode, MethodeClass> methodeMap = new HashMap<>;
     String dossier ;
+    private String cleRoles;
 
     public static class MethodeClass{
         Method methode;
@@ -239,6 +240,26 @@ public class FrontControllerServlet extends HttpServlet {
                     return;
                 }
             }
+            if(entree.getValue().getMethode().isAnnotationPresent(annotation.Roles.class)){
+                annotation.Roles rolesAnnotation = entree.getValue().getMethode().getAnnotation(annotation.Roles.class);
+                String[] roles = rolesAnnotation.value();
+                if (roles.length > 0) {
+                    Object userRoleObj = getMysession(req).get(cleRoles);
+                    String userRole = (userRoleObj != null) ? userRoleObj.toString() : null;
+                    boolean hasRole = false;
+                    for (String role : roles) {
+                        if (role.equals(userRole)) {
+                            hasRole = true;
+                            break;
+                        }
+                    }
+                    if (!hasRole) {
+                        resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        resp.getWriter().write("Forbidden: You do not have the required role to access this resource.");
+                        return;
+                    }
+                }
+            }
             try {
                 Class<?>[] parameterTypes = entree.getValue().getMethode().getParameterTypes();
                 Object[] args = new Object[parameterTypes.length];
@@ -362,6 +383,7 @@ public class FrontControllerServlet extends HttpServlet {
         super.init();
 
         cleAuth = getServletContext().getInitParameter("framework.auth.key");
+        cleRoles = getServletContext().getInitParameter("framework.roles.key");
         dossier = getServletContext()
                 .getInitParameter("framework.upload.dir");
 
