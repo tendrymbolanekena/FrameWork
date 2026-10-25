@@ -4,6 +4,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession; 
 import java.io.IOException;
 import java.util.*;
 import utilitaire.*;
@@ -24,6 +25,8 @@ import jakarta.servlet.annotation.MultipartConfig;
 
 @MultipartConfig
 public class FrontControllerServlet extends HttpServlet {
+
+    private static final String SESSION_ATTRIBUTE = "Mysession";
 
     // private List<String> classeController = new ArrayList<>();
     // private Map<UrlMethode, MethodeClass> methodeMap = new HashMap<>;
@@ -221,6 +224,7 @@ public class FrontControllerServlet extends HttpServlet {
         Map.Entry<UrlMethode, MethodeClass> entree = methodeMap.get(path) != null ? Map.entry(path, methodeMap.get(path)) : null;
         // resp.getWriter().write("<h1>Matching Entry: " + (entree != null ? entree.getKey().getPath() + entree.getKey().getMethode() : "No matching entry") + "</h1>");
 
+        boolean S = false;
         if(entree !=null){
             // resp.getWriter().write("<h1>Controller Class: " + entree.getValue().getInstance().getClass().getSimpleName() + "</h1> ");
             // resp.getWriter().write("<h2>Method: " + entree.getValue().getMethode().getName() + "</h2>");
@@ -260,10 +264,14 @@ public class FrontControllerServlet extends HttpServlet {
                                     ? Boolean.parseBoolean(valeur) : false;
                         }
 
+
                     } else if (nomObjet != null
                             && nomObjet.equals(type.getSimpleName())) {
                             
                         args[i] = construireObjet(type, "", req);
+                    }else if(type == Mysession.class){
+                        args[i] = getMysession(req);
+                        S = true;
                     }
                 }
                 
@@ -273,6 +281,10 @@ public class FrontControllerServlet extends HttpServlet {
 
                 Object resultat = entree.getValue().getMethode()
                         .invoke(entree.getValue().getInstance(), args);
+                
+                if(S){
+                    updateSession(req);
+                }
 
                 if (entree.getValue().getToJson() != null) {
                     resp.setContentType("application/json;charset=UTF-8");
@@ -333,6 +345,8 @@ public class FrontControllerServlet extends HttpServlet {
 
     }
 
+
+
     @Override
     public void init() throws ServletException {
         super.init();
@@ -344,6 +358,38 @@ public class FrontControllerServlet extends HttpServlet {
             throw new ServletException(
                 "Le paramètre framework.upload.dir n'est pas configuré"
             );
+        }
+    }
+
+    protected Mysession getMysession(HttpServletRequest hsr){
+        HttpSession Hsession = hsr.getSession(true);
+
+        synchronized (Hsession){
+            Object value = Hsession.getAttribute(SESSION_ATTRIBUTE);
+
+            if(value instanceof Mysession){
+                return (Mysession)value;
+            }
+
+            Mysession session = new Mysession();
+
+            Hsession.setAttribute(SESSION_ATTRIBUTE, session);
+
+            return session;
+        }
+    }
+
+    protected void updateSession(HttpServletRequest req){
+        HttpSession Hsession = req.getSession(false);
+
+        if(Hsession == null || Hsession.getAttribute(SESSION_ATTRIBUTE) == null ){
+            return;
+        }
+        
+        Object val = Hsession.getAttribute(SESSION_ATTRIBUTE);
+
+        if(val instanceof Mysession){
+            Hsession.setAttribute(SESSION_ATTRIBUTE, val);
         }
     }
 
