@@ -14,6 +14,7 @@ import annotation.ToJson;
 import com.google.gson.Gson;
 import java.io.PrintWriter;
 import annotation.Param;
+import annotation.Auth;
 
 import java.io.InputStream;
 import java.lang.reflect.Field;
@@ -28,6 +29,7 @@ public class FrontControllerServlet extends HttpServlet {
 
     private static final String SESSION_ATTRIBUTE = "Mysession";
 
+    private String cleAuth ;
     // private List<String> classeController = new ArrayList<>();
     // private Map<UrlMethode, MethodeClass> methodeMap = new HashMap<>;
     String dossier ;
@@ -229,6 +231,14 @@ public class FrontControllerServlet extends HttpServlet {
             // resp.getWriter().write("<h1>Controller Class: " + entree.getValue().getInstance().getClass().getSimpleName() + "</h1> ");
             // resp.getWriter().write("<h2>Method: " + entree.getValue().getMethode().getName() + "</h2>");
             entree.getValue().getMethode().setAccessible(true);
+            if(entree.getValue().getMethode().isAnnotationPresent(Auth.class)){
+                
+                if (getMysession(req).contains(cleAuth) == false) {
+                    resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    resp.getWriter().write("Unauthorized: Invalid or missing Authorization header.");
+                    return;
+                }
+            }
             try {
                 Class<?>[] parameterTypes = entree.getValue().getMethode().getParameterTypes();
                 Object[] args = new Object[parameterTypes.length];
@@ -351,6 +361,7 @@ public class FrontControllerServlet extends HttpServlet {
     public void init() throws ServletException {
         super.init();
 
+        cleAuth = getServletContext().getInitParameter("framework.auth.key");
         dossier = getServletContext()
                 .getInitParameter("framework.upload.dir");
 
