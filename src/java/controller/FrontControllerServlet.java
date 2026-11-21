@@ -6,6 +6,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession; 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import utilitaire.*;
 import java.lang.reflect.*;
@@ -141,6 +143,15 @@ public class FrontControllerServlet extends HttpServlet {
             } else if (t == boolean.class || t == Boolean.class) {
                 if (valeur != null) {
                     champ.set(objet, Boolean.parseBoolean(valeur));
+                }
+            } else if (t == LocalDate.class) {
+                if (valeur != null && !valeur.isBlank()) {
+                    champ.set(objet, LocalDate.parse(valeur));
+                }
+
+            } else if (t == LocalDateTime.class) {
+                if (valeur != null && !valeur.isBlank()) {
+                    champ.set(objet, LocalDateTime.parse(valeur));
                 }
 
             } else if (t == MapFile.class) {
