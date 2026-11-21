@@ -16,4 +16,4 @@ document.addEventListener("submit", function (event) {
     }
 
     champ.value = classe;
-});
+}, true);
