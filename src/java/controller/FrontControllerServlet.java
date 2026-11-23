@@ -6,14 +6,18 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession; 
 import java.io.IOException;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+
 import java.util.*;
 import utilitaire.*;
 import java.lang.reflect.*;
 import view.ModelAndView;
 import annotation.ToJson;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonSerializer;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.io.PrintWriter;
 import annotation.Param;
 import annotation.Auth;
@@ -25,6 +29,7 @@ import jakarta.servlet.http.Part;
 import jakarta.servlet.http.HttpServletRequest;
 import util.*;
 import jakarta.servlet.annotation.MultipartConfig;
+
 
 @MultipartConfig
 public class FrontControllerServlet extends HttpServlet {
@@ -335,9 +340,18 @@ public class FrontControllerServlet extends HttpServlet {
                     if (entree.getValue().getToJson().prettyPrint()) {
                         out.print(resultat);
                     } else {
-                        Gson objectMapper = new Gson();
+                        Gson objectMapper = new GsonBuilder()
+                            .registerTypeAdapter(LocalDate.class,
+                                (JsonSerializer<LocalDate>) (src, type, context) ->
+                                    new JsonPrimitive(src.toString()))
+                            .registerTypeAdapter(LocalDateTime.class,
+                                (JsonSerializer<LocalDateTime>) (src, type, context) ->
+                                    new JsonPrimitive(src.toString()))
+                            .create();
+
                         out.print(objectMapper.toJson(resultat));
                     }
+
                 
                     out.flush();
                     return;
